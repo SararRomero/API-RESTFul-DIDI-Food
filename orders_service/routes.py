@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from .database import SessionLocal, engine
 from . import models
@@ -6,16 +6,19 @@ from jose import jwt, JWTError
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import httpx
+from typing import List
 
 SECRET_KEY = "didi_food_secret_key_2024"
 ALGORITHM = "HS256"
-PRODUCTS_SERVICE_URL = "http://127.0.0.1:8002"  # Ajusta al puerto real
+PRODUCTS_SERVICE_URL = "http://127.0.0.1:8002"
 
 models.Base.metadata.create_all(bind=engine)
 router = APIRouter()
 security = HTTPBearer()
 
-# Dependencias
+# --------------------------
+#     DEPENDENCIAS
+# --------------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -31,10 +34,10 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
-# Schemas
-from pydantic import BaseModel
-from typing import List
 
+# --------------------------
+#     SCHEMAS
+# --------------------------
 class OrderItem(BaseModel):
     product_id: int
     quantity: int
@@ -43,57 +46,93 @@ class OrderItem(BaseModel):
 class OrderCreate(BaseModel):
     items: List[OrderItem]
 
-# Endpoints
-@router.get("/orders")
+
+# **RESPONSE MODEL OBLIGATORIO**
+class OrderResponse(BaseModel):
+    id: int
+    user_email: str
+    producto_nombre: str
+    producto_precio: float
+    producto_descripcion: str
+    cantidad: int
+    total: float
+
+    class Config:
+        orm_mode = True
+
+
+# --------------------------
+#     ENDPOINTS
+# --------------------------
+
+@router.get("/orders", response_model=List[OrderResponse])
 def list_orders(
     db: Session = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    orders = db.query(models.Order).filter(models.Order.user_email == current_user.get("sub")).all()
+    orders = (
+        db.query(models.Order)
+        .filter(models.Order.user_email == current_user.get("sub"))
+        .all()
+    )
     return orders
 
-from fastapi import status
 
-@router.post("/orders", status_code=status.HTTP_201_CREATED)
+
+@router.post("/orders", status_code=status.HTTP_201_CREATED, response_model=List[OrderResponse])
 def create_order(
     order: OrderCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
-    # Consultar datos del producto desde el microservicio de productos
+    created_orders = []
+
+    # Obtener lista de productos del microservicio
     response = httpx.get(f"{PRODUCTS_SERVICE_URL}/products")
     if response.status_code != 200:
-        raise HTTPException(status_code=500, detail="Error al obtener productos del servicio de productos")
+        raise HTTPException(status_code=500, detail="Error consultando productos")
 
     products = response.json()
-    product = next((p for p in products if p["id"] == order.producto_id), None)
-    if not product:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
 
-    total = product["precio"] * order.cantidad
+    # Recorrer todos los productos enviados
+    for item in order.items:
+        product = next((p for p in products if p["id"] == item.product_id), None)
 
-    new_order = models.Order(
-        user_email=current_user.get("sub"),
-        producto_nombre=product["nombre"],
-        producto_precio=product["precio"],
-        producto_descripcion=product["descripcion"],
-        cantidad=order.cantidad,
-        total=total
-    )
+        if not product:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Producto con ID {item.product_id} no encontrado"
+            )
 
-    db.add(new_order)
-    db.commit()
-    db.refresh(new_order)
+        total = product["precio"] * item.quantity
 
-    return new_order
+        new_order = models.Order(
+            user_email=current_user.get("sub"),
+            producto_nombre=product["nombre"],
+            producto_precio=product["precio"],
+            producto_descripcion=product["descripcion"],
+            cantidad=item.quantity,
+            total=total
+        )
 
-@router.get("/orders/{order_id}")
+        db.add(new_order)
+        db.commit()
+        db.refresh(new_order)
+
+        created_orders.append(new_order)
+
+    return created_orders
+
+
+
+@router.get("/orders/{order_id}", response_model=OrderResponse)
 def get_order(
     order_id: int,
     db: Session = Depends(get_db),
     current_user: dict = Depends(verify_token)
 ):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
+
     if not order:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
 

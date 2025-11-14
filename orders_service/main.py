@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from . import routes
 from fastapi.middleware.cors import CORSMiddleware
 
+
 app = FastAPI(
     title="Orders Service",
     docs_url="/docs",
