@@ -36,15 +36,16 @@ Authorization: <JWT_TOKEN_CLIENTE>
 
 `200 OK`
 ```json
-{
-    "user_email": "prueba10@gmail.com",
-    "producto_nombre": "helado",
-    "producto_descripcion": "bomba de azucar que te da una diabetes intensa",
-    "total": 12000,
-    "id": 3,
+
+  {
+    "id": 15,
+    "user_email": "sr@gmail.com",
+    "producto_nombre": "Pepsi",
     "producto_precio": 3000,
-    "cantidad": 4
-}
+    "producto_descripcion": "bebida con gas, no la tomes :)",
+    "cantidad": 3,
+    "total": 9000
+  }
 ```
 `403 Forbidden`
 ```json
@@ -71,8 +72,12 @@ Authorization: <JWT_TOKEN_CLIENTE>
 ### Request
 ```json
 {
-  "producto_id": 6,
-  "cantidad": 4
+  "items": [
+    {
+      "product_id": 9,
+      "quantity": 8
+    }
+  ]
 }
 ```
 ### Response (Muestra los datos del producto copiados)
@@ -80,15 +85,17 @@ Authorization: <JWT_TOKEN_CLIENTE>
 
 `201 Created`
 ```json
-{
-  "user_email": "prueba10@gmail.com",
-  "producto_nombre": "helado",
-  "producto_descripcion": "bomba de azucar que te da una diabetes intensa",
-  "total": 12000,
-  "id": 3,
-  "producto_precio": 3000,
-  "cantidad": 4
-}
+[
+  {
+    "id": 18,
+    "user_email": "sr@gmail.com",
+    "producto_nombre": "chocolatina",
+    "producto_precio": 2000,
+    "producto_descripcion": "chocolate falso",
+    "cantidad": 8,
+    "total": 16000
+  }
+]
 ```
 
 `401 Unauthorized`

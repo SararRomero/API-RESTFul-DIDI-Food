@@ -30,10 +30,10 @@ Este servicio es la puerta de entrada a la plataforma. Su única responsabilidad
 
 ```json
 {
-  "email": "prueba9@gmail.com",
-  "password": "333",
-  "role": "cliente"
-
+  "name": "Sara Romero",
+  "email": "sr@gmail.com",
+  "password": "789",
+  "role": "admin"
 }
 ```
 ### Response 
@@ -44,9 +44,10 @@ Este servicio es la puerta de entrada a la plataforma. Su única responsabilidad
 
 ```json
 {
-  "id": 16,
-  "email": "prueba9@gmail.com",
-  "role": "cliente"
+  "id": 3,
+  "name": "Sara Romero",
+  "email": "sr@gmail.com",
+  "role": "admin"
 }
 ```
 
@@ -90,8 +91,9 @@ Este servicio es la puerta de entrada a la plataforma. Su única responsabilidad
 
 ```json
 {
-  "email": "prueba9@gmail.com",
-  "password": "333"
+  "name": "Sara Romero",
+  "email": "sr@gmail.com",
+  "password": "789"
 }
 ```
 ### Response 
@@ -100,8 +102,9 @@ Este servicio es la puerta de entrada a la plataforma. Su única responsabilidad
 `200 OK`
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwcnVlYmE5QGdtYWlsLmNvbSIsInJvbGUiOiJjbGllbnRlIn0.VeISE3k6g8sOD_0Jf6b_PfNqe6h113tfvpXADVvGfa4",
-  "token_type": "bearer"
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzckBnbWFpbC5jb20iLCJyb2xlIjoiYWRtaW4iLCJuYW1lIjoiU2FyYSBSb21lcm8ifQ.GKdpJ8Uk7TH4KpZ7yjN6mgGGrYQrrP5yYFnynLxg0PA",
+  "token_type": "bearer",
+  "name": "Sara Romero"
 }
 ```
 `401 Unauthorized`

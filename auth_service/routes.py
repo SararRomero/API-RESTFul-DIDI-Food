@@ -20,12 +20,15 @@ ALGORITHM = "HS256"
 
 
 class UserCreate(BaseModel):
+    name: str
     email: str
     password: str
     role: str = "cliente"
 
 
+
 class UserLogin(BaseModel):
+    name: str  | None = None
     email: str | None = None
     password: str | None = None
 
@@ -59,6 +62,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
+        name=user.name,
         email=user.email,
         hashed_password=hashed_password,
         role=user.role
@@ -68,7 +72,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
 
-    return {"id": db_user.id, "email": db_user.email, "role": db_user.role}
+    return {"id": db_user.id,"name": db_user.name, "email": db_user.email, "role": db_user.role}
 
 
 #  ENDPOINT 2: Login
@@ -76,12 +80,14 @@ from fastapi import FastAPI, status
 @router.post("/login", status_code=status.HTTP_200_OK)
 def login(user: UserLogin, db: Session = Depends(get_db)):
 
-    if not user.email or not user.password:
+    # Validar que envíen todos los campos
+    if not user.name or not user.email or not user.password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Debe enviar 'email' y 'password'."
+            detail="Debe enviar 'name', 'email' y 'password'."
         )
 
+    # Buscar usuario por email
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if not db_user:
         raise HTTPException(
@@ -89,17 +95,33 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             detail="Credenciales incorrectas"
         )
 
+    # Validar nombre
+    if db_user.name != user.name:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nombre incorrecto"
+        )
+
+    # Validar contraseña
     if not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas"
         )
 
-    token_data = {"sub": db_user.email, "role": db_user.role}
+    # Crear token
+    token_data = {
+        "sub": db_user.email,
+        "role": db_user.role,
+        "name": db_user.name
+    }
     access_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
-    return {"access_token": access_token, "token_type": "bearer"}
-
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "name": db_user.name
+    }
 
 #  ENDPOINT 3: Validar token y obtener usuario actual
 @router.get("/me")
@@ -116,7 +138,12 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        return {"id": user.id, "email": user.email, "role": user.role}
+        return {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role
+        }
 
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
